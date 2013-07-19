@@ -2,31 +2,37 @@
 #
 # Adds or deletes one or more ssh-keys
 #
-class authorized_keys (
-  $keystore = "/root/.ssh/authorized_keys",
+class ssh (
+  $authorized_keys = undef,
 ) {
+
+  if $authorized_keys != undef {
+    create_resources('ssh::authorized_key',$authorized_keys)
+  }
+}
+
+define ssh::authorized_key (
+  $key,
+  $path,
+  $type = 'ssh-rsa',
+) {
+
   include concat::setup
-  concat { $keystore:
+  
+  concat { $path:
     owner => root,
     group => root,
     mode  => '0600',
   }
+  
   concat::fragment { "header":
-    target  => $keystore,
+    target  => $path,
     content => "# This file is being maintained by Puppet.\n# DO NOT EDIT\n",
-    order   => 01,
+    order   => 1,
   }
-  $authkeys = hiera_hash('authorized_keys::keys', undef)
-  if $authkeys != undef {
-        create_resources('authorized_keys::key',$authkeys)
-  }
-}
 
-define authorized_keys::key (
-  $key,
-) {
-  concat::fragment { "${name}":
-    target  => $authorized_keys::keystore,
-    content => "${key}\n",
+  concat::fragment { $name:
+    target  => $path,
+    content => "${type} ${key} ${name}\n",
   }
 }
